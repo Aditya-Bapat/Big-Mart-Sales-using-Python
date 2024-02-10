@@ -1,0 +1,123 @@
+#Import Required Packages
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
+import seaborn as sns
+from sklearn.preprocessing import LabelEncoder
+from sklearn.model_selection import train_test_split
+from xgboost import XGBRegressor
+from sklearn import metrics
+
+#Read Dataset
+df = pd.read_csv("/content/Train.csv")
+
+#Top 5 records of dataset
+df.head()
+#Last 5 records of dataset
+df.tail()
+
+#Dataset Information
+df.info()
+
+# Generate summary statistics for the dataset
+df.describe()
+
+# Get the shape of the dataset (number of rows and columns)
+df.shape
+
+#Finding null values in a dataset
+df.isnull().sum()
+
+# Fill missing values in the 'Item_Weight' column with the mean of the column
+df['Item_Weight'].mean()
+
+df['Item_Weight'].fillna(df['Item_Weight'].mean(), inplace=True)
+
+# Find the mode of the 'Outlet_Size' column for each 'Outlet_Type'
+df['Outlet_Size'].mode()
+
+modeofOutletsize = df.pivot_table(values='Outlet_Size', columns='Outlet_Type', aggfunc=(lambda x: x.mode()[0]))
+
+print(modeofOutletsize)
+
+# Identify missing values in the 'Outlet_Size' column
+missvalues = df['Outlet_Size'].isnull()
+
+print(missvalues)
+
+# Fill missing values in 'Outlet_Size' based on the mode for the corresponding 'Outlet_Type'
+df.loc[missvalues, 'Outlet_Size'] = df.loc[missvalues,'Outlet_Type'].apply(lambda x: modeofOutletsize[x])
+
+df.isnull().sum()
+
+df.describe()
+
+#The line sns.set() is used to set the default styling for plots when using the Seaborn library for data visualization.
+sns.set()
+
+# Count the values in the 'Item_Fat_Content' column
+df['Item_Fat_Content'].value_counts()
+
+# Replace variations of 'low fat' and 'regular' with standardized labels
+df.replace({'Item_Fat_Content': {'low fat':'Low Fat','LF':'Low Fat', 'reg':'Regular'}}, inplace=True)
+
+# Count the values in the 'Item_Fat_Content' column after replacement
+df['Item_Fat_Content'].value_counts()
+
+# Encode categorical variables to numerical values using LabelEncoder
+encoder = LabelEncoder()
+
+df['Item_Identifier'] = encoder.fit_transform(df['Item_Identifier'])
+
+df['Item_Fat_Content'] = encoder.fit_transform(df['Item_Fat_Content'])
+
+df['Item_Type'] = encoder.fit_transform(df['Item_Type'])
+
+df['Outlet_Identifier'] = encoder.fit_transform(df['Outlet_Identifier'])
+
+df['Outlet_Size'] = encoder.fit_transform(df['Outlet_Size'])
+
+df['Outlet_Location_Type'] = encoder.fit_transform(df['Outlet_Location_Type'])
+
+df['Outlet_Type'] = encoder.fit_transform(df['Outlet_Type'])
+
+df.head()
+
+# Split the dataset into features (X) and target (Y)
+X = df.drop(columns='Item_Outlet_Sales', axis=1)
+Y = df['Item_Outlet_Sales']
+
+# Split the data into training and testing sets
+X_train, X_test, Y_train, Y_test = train_test_split(X, Y, test_size=0.2, random_state=2)
+
+print(X.shape, X_train.shape, X_test.shape)
+
+# Create an XGBoost regressor model
+regressor = XGBRegressor()
+
+# Train the model on the training data
+regressor.fit(X_train, Y_train)
+
+# Make predictions on the training data
+training_data_prediction = regressor.predict(X_train)
+
+# Calculate the R-squared score for the training data
+r2_train = metrics.r2_score(Y_train, training_data_prediction)
+
+print('R Squared value = ', r2_train)
+
+# Make predictions on the testing data
+test_data_prediction = regressor.predict(X_test)
+
+# Calculate the R-squared score for the testing data
+r2_test = metrics.r2_score(Y_test, test_data_prediction)
+
+print('R Squared value = ', r2_test)
+
+plt.figure(figsize=(6,6))
+sns.distplot(df['Item_Visibility'])
+plt.show()
+
+plt.figure(figsize=(6,6))
+sns.distplot(df['Item_MRP'])
+plt.show()
